@@ -3,10 +3,16 @@ from flask import Flask
 app = Flask(__name__)
 
 
-@app.route('/', methods=['GET'])
+@app.route("/pibubpi", methods=["GET"])
 def say_hello():
-    return 'Hello!'
+    return 'Hello LOOOOOYD'
+
+@app.route("/", methods=["GET"])
+def say_stop():
+    return 'stop flooding boy'
+
+
 
 
 if __name__ == "__main__":
-    app.run(port=81, debug=True)
+    app.run(host='0.0.0.0', debug=True)
