@@ -92,7 +92,7 @@ def add_category(message):
             bot.send_message(message.chat.id, 'Напишите название категории')
 
     def step2(message):
-        category['tags'] = message.text.strip.split(",") + [category['title']]
+        category['tags'] = message.text.split(",") + [category['title']]
         markup = types.InlineKeyboardMarkup(row_width=2)
         item1 = types.InlineKeyboardButton('Да', callback_data='yes')
         item2 = types.InlineKeyboardButton('Нет', callback_data='no')
