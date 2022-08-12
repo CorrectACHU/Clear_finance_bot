@@ -1,5 +1,6 @@
 import json
 import datetime
+import telebot
 
 
 def get_user(message):
@@ -26,7 +27,6 @@ def get_expense(message):
     return expense
 
 
-def lower_strip(string):
-    string = string.strip()
-    string = string.lower()
-    return string
+def cancel_button():
+    item = telebot.types.InlineKeyboardButton('отмена 🚫', callback_data='cancel')
+    return item

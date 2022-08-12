@@ -6,7 +6,7 @@ import os
 from dotenv import load_dotenv
 from telebot import types
 
-from services.services import get_user, get_expense, lower_strip
+from services.services import get_user, get_expense, cancel_button
 
 # ENV
 load_dotenv()
@@ -50,7 +50,7 @@ def start(message):
         print(ins_result.inserted_id)
         printed_mess = f'Вы зарегистрированы, ваш id {user["id"]}\n'
         bot.send_message(message.chat.id, printed_mess, parse_mode='html')
-    bot.send_message(message.chat.id, "Напиши /help, чтобы узнать что умеет бот", parse_mode='html')
+    bot.send_message(message.chat.id, "Используй команду /help, \nчтобы узнать что умеет бот", parse_mode='html')
 
 
 # LIST OF CATEGORIES VIEW
@@ -62,12 +62,41 @@ def show_categories(message):
     bot.send_message(message.chat.id, categories)
     bot.send_message(
         message.chat.id,
-        "Ты можешь узнать теги по которым бот понимает\nв какую категорию отнести тот или иной расход\n просто напиши /tags {название категории}"
+        "Ты можешь узнать теги по которым бот понимает\nв какую категорию отнести тот или иной расход\nпросто используй команду /tags"
     )
     bot.send_message(
         message.chat.id,
-        "Так же ты можешь добавить свои категории, просто напиши /add_category {Название категории}"
+        "Так же ты можешь добавить свои категории, \nиспользуй команду /add_category"
     )
+
+
+# SHOW TAGS
+@bot.message_handler(commands=['tags'])
+def show_category_tags(message):
+    categories = [i for i in categories_db.find({"$or": [{"allow": "any"}, {"allow": f"{message.from_user.id}"}]})]
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    items = [types.KeyboardButton(f'{i["title"]}') for i in categories] + [
+        cancel_button()]
+    markup.add(*items)
+
+    def step1(message):
+        for i in categories:
+            markup = types.ReplyKeyboardRemove()
+            if message.text == "отмена 🚫":
+                bot.delete_message(message.chat.id, message.message_id)
+                bot.delete_message(message.chat.id, message.message_id - 1)
+                bot.send_message(message.chat.id, "Действие отменено", reply_markup=markup)
+            elif message.text == f"{i['title']}":
+                bot.delete_message(message.chat.id, message.message_id)
+                bot.delete_message(message.chat.id, message.message_id - 1)
+                bot.send_message(
+                    message.chat.id,
+                    f"Следующие теги относяться к категории <b>{i['title']}</b> :\n{', '.join(i['tags'])}",
+                    parse_mode='html', reply_markup=markup
+                )
+
+    bot.send_message(message.chat.id, "Выберите категорию ", reply_markup=markup)
+    bot.register_next_step_handler(message, step1)
 
 
 # ADD CATEGORY
@@ -75,69 +104,52 @@ def show_categories(message):
 def add_category(message):
     global category
     category = {'title': '', 'tags': '', 'allow': f'{message.from_user.id}'}
+    markup = types.InlineKeyboardMarkup()
 
     def step1(message):
+        nonlocal markup
         category['title'] = message.text.lower().strip()
         try:
             bot.send_message(
                 message.chat.id,
-                f"Имя вашей категории {message.text}"
+                f"Имя категории {message.text}"
             )
             bot.send_message(
                 message.chat.id,
-                "Напишите минимум 2 тега через запятую по которым вы сможете добавлять в свою котегорию новые траты"
+                "Напиши тег через запятую по которым ты сможешь добавлять в свою котегорию новые траты",
+                reply_markup=markup,
             )
             bot.register_next_step_handler(message, step2)
         except:
-            bot.send_message(message.chat.id, 'Напишите название категории')
+            bot.send_message(message.chat.id, 'Напиши название категории')
 
     def step2(message):
         category['tags'] = message.text.split(",") + [category['title']]
-        markup = types.InlineKeyboardMarkup(row_width=2)
+        markup = types.InlineKeyboardMarkup()
         item1 = types.InlineKeyboardButton('Да', callback_data='yes')
         item2 = types.InlineKeyboardButton('Нет', callback_data='no')
         markup.add(item1, item2)
         try:
             bot.send_message(
                 message.chat.id,
-                f"Теги, по которым вы сможете добавлять расходы {category['tags']}"
+                f"Теги, по которым ты сможешь добавлять расходы :\n{', '.join(category['tags'])}"
             )
             bot.send_message(
                 message.chat.id,
-                f"Категория: {category['title']},\n теги: {category['tags']},\n<b>Вы хотите сохранить эту категорию?</b>",
+                f"Категория: {category['title']},\nтеги - {','.join(category['tags'])},\n<b>Cохранить эту категорию?</b>",
                 reply_markup=markup,
                 parse_mode='html'
             )
         except:
-            bot.send_message(message.chat.id, 'Напишите теги пример =>\n кофе, круасан, бутерброд')
+            bot.send_message(message.chat.id, 'Напиши теги пример =>\n кофе, круасан, бутерброд')
             bot.register_next_step_handler(message, step2)
 
     bot.send_message(
         message.chat.id,
-        'Сначала я попрошу Вас написать название категории, затем теги по которым бот будет определять в какую категорию добавлять вашу запись'
+        'Сначала напиши название категории, затем теги по которым бот будет определять в какую категорию добавлять запись'
     )
-    bot.send_message(message.chat.id, 'Напишите название категории')
+    bot.send_message(message.chat.id, 'Напиши название категории')
     bot.register_next_step_handler(message, step1)
-
-
-@bot.callback_query_handler(func=lambda call: True)
-def callback(call):
-    if call.message:
-        if call.data == 'yes':
-            bot.edit_message_text(
-                chat_id=call.message.chat.id,
-                message_id=call.message.id,
-                text=f"Категория <b>{category['title']}</b> успешно сохранена!",
-                parse_mode='html'
-            )
-            categories_db.insert_one(category)
-        else:
-            bot.edit_message_text(
-                chat_id=call.message.chat.id,
-                message_id=call.message.id,
-                text=f"Категория <b>{category['title']}</b> не <u>сохранена!</u>",
-                parse_mode='html'
-            )
 
 
 # ADD EXPENSE
@@ -153,7 +165,7 @@ def add_expense(message):
             bot.send_message(message.chat.id, mess)
             bot.register_next_step_handler(message, step1)
 
-    bot.send_message(message.chat.id, "Введите расход")
+    bot.send_message(message.chat.id, "Введи расход")
     bot.register_next_step_handler(message, step1)
 
 
@@ -170,6 +182,27 @@ def list_of_commands(message):
         'Добавить категорию ты можешь с помощью команды /add_category\n',
         parse_mode='html'
     )
+
+
+@bot.callback_query_handler(func=lambda call: True)
+def callback(call):
+    global category
+    if call.message:
+        if call.data == 'yes':
+            bot.edit_message_text(
+                chat_id=call.message.chat.id,
+                message_id=call.message.id,
+                text=f"Категория <b>{category['title']}</b> успешно сохранена!",
+                parse_mode='html'
+            )
+            categories_db.insert_one(category)
+        elif call.data == 'no':
+            bot.edit_message_text(
+                chat_id=call.message.chat.id,
+                message_id=call.message.id,
+                text=f"Категория <b>{category['title']}</b> не <u>сохранена!</u>",
+                parse_mode='html'
+            )
 
 
 bot.polling(none_stop=True)
