@@ -43,6 +43,7 @@ current_category = {}
 # LOGIC
 @bot.message_handler(commands=['start'])
 def start(message):
+    # CATCH BUTTONS FROM MAIN MENU
     def step1(message):
         if message.text == 'Информация':
             bot.send_message(
@@ -58,22 +59,18 @@ def start(message):
             bot.register_next_step_handler(message, step1)
         elif message.text == 'Мои категории':
             markup = categories_markup(message, categories_db)
-            bot.send_message(message.chat.id, 'Ваши категории', reply_markup=markup)
+            bot.send_message(message.chat.id, 'Твои категории', reply_markup=markup)
             bot.delete_message(message.chat.id, message.message_id)
             bot.register_next_step_handler(message, category1)
         elif message.text == 'Мои траты':
             bot.send_message(message.chat.id, 'Это заглушка')
 
+    # CATCH BUTTONS FROM CATEGORIES MENU
     def category1(message):
         global current_category
         categories = get_categories(message, categories_db)
         if message.text == 'Назад 🔙':
             go_back(message, "Выбери что-нибудь еще :)", markup=main_menu(), bot=bot, next_func=step1)
-        # elif message.text == 'Удалить категорию':
-        #     markup = categories_markup(message,categories_db)
-        #     bot.send_message(message.chat.id, "Выбери что-нибудь еще :)", reply_markup=markup)
-        #     bot.delete_message(message.chat.id, message.message_id)
-        #     bot.register_next_step_handler(message, step1)
         elif message.text == 'Добавить категорию':
             markup = back_markup()
             bot.send_message(message.chat.id, 'Как будет называться категория?', reply_markup=markup)
@@ -101,6 +98,7 @@ def start(message):
                 bot.delete_message(message.chat.id, message.message_id)
                 bot.register_next_step_handler(message, category2)
 
+    # CATCH BUTTONS FROM SOLO CATEGORY MENU
     def category2(message):
         if message.text == 'Назад 🔙':
             markup = categories_markup(message, categories_db)
@@ -116,16 +114,17 @@ def start(message):
             bot.send_message(message.chat.id, 'Новое имя категории', reply_markup=markup)
             bot.register_next_step_handler(message, update_category)
 
+    # CATCH TEXT OR BACK BUTTON FROM ADD CATEGORY MENU
     def add_category1(message):
         if message.text == "Назад 🔙":
             markup = categories_markup(message, categories_db)
             go_back(message, "Твои категории", bot, markup, category1)
         else:
             markup = main_menu()
-            new_category = {'title': message.text.lower(), 'allow': message.from_user.id}
-            insert_id = categories_db.insert_one({'title': message.text.lower(), 'allow': message.from_user.id})
+            categories_db.insert_one({'title': message.text.lower(), 'allow': message.from_user.id})
             go_back(message, f'Категория "{message.text.upper()}" создана!', bot, markup, step1)
 
+    # CATCH TEXT OR BACK BUTTON FROM UPDATE CATEGORY MENU
     def update_category(message):
         category = current_category
         old_title = category['title']
@@ -134,7 +133,7 @@ def start(message):
             go_back(message, "Твои категории", bot, markup, category2)
         else:
             markup = main_menu()
-            update_id = categories_db.update_one({'_id': category['_id']}, {"$set": {'title': message.text.lower()}})
+            categories_db.update_one({'_id': category['_id']}, {"$set": {'title': message.text.lower()}})
             go_back(message, f'Категория "{old_title}" изменена на "{message.text.upper()}"!', bot, markup, step1)
 
     markup = main_menu()
@@ -150,88 +149,6 @@ def start(message):
     bot.register_next_step_handler(message, step1)
 
 
-# LIST OF CATEGORIES VIEW
-
-
-# SHOW TAGS
-# @bot.message_handler(commands=['tags'])
-# def show_category_tags(message):
-#     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-#
-#
-#     def step1(message):
-#         for i in categories:
-#             markup = types.ReplyKeyboardRemove()
-#             if message.text == "отмена 🚫":
-#                 bot.delete_message(message.chat.id, message.message_id)
-#                 bot.delete_message(message.chat.id, message.message_id - 1)
-#                 bot.send_message(message.chat.id, "Действие отменено", reply_markup=markup)
-#             elif message.text == f"{i['title']}":
-#                 bot.delete_message(message.chat.id, message.message_id)
-#                 bot.delete_message(message.chat.id, message.message_id - 1)
-#                 bot.send_message(
-#                     message.chat.id,
-#                     f"Следующие теги относяться к категории <b>{i['title']}</b> :\n{', '.join(i['tags'])}",
-#                     parse_mode='html', reply_markup=markup
-#                 )
-#
-#     bot.send_message(message.chat.id, "Выберите категорию ", reply_markup=markup)
-#     bot.register_next_step_handler(message, step1)
-#
-#
-# # ADD CATEGORY
-# @bot.message_handler(commands=['add_category'])
-# def add_category(message):
-#     global category
-#     category = {'title': '', 'tags': '', 'allow': f'{message.from_user.id}'}
-#     markup = types.InlineKeyboardMarkup()
-#
-#     def step1(message):
-#         nonlocal markup
-#         category['title'] = message.text.lower().strip()
-#         try:
-#             bot.send_message(
-#                 message.chat.id,
-#                 f"Имя категории {message.text}"
-#             )
-#             bot.send_message(
-#                 message.chat.id,
-#                 "Напиши тег через запятую по которым ты сможешь добавлять в свою котегорию новые траты",
-#                 reply_markup=markup,
-#             )
-#             bot.register_next_step_handler(message, step2)
-#         except:
-#             bot.send_message(message.chat.id, 'Напиши название категории')
-#
-#     def step2(message):
-#         category['tags'] = message.text.split(",") + [category['title']]
-#         markup = types.InlineKeyboardMarkup()
-#         item1 = types.InlineKeyboardButton('Да', callback_data='yes')
-#         item2 = types.InlineKeyboardButton('Нет', callback_data='no')
-#         markup.add(item1, item2)
-#         try:
-#             bot.send_message(
-#                 message.chat.id,
-#                 f"Теги, по которым ты сможешь добавлять расходы :\n{', '.join(category['tags'])}"
-#             )
-#             bot.send_message(
-#                 message.chat.id,
-#                 f"Категория: {category['title']},\nтеги - {','.join(category['tags'])},\n<b>Cохранить эту категорию?</b>",
-#                 reply_markup=markup,
-#                 parse_mode='html'
-#             )
-#         except:
-#             bot.send_message(message.chat.id, 'Напиши теги пример =>\n кофе, круасан, бутерброд')
-#             bot.register_next_step_handler(message, step2)
-#
-#     bot.send_message(
-#         message.chat.id,
-#         'Сначала напиши название категории, затем теги по которым бот будет определять в какую категорию добавлять запись'
-#     )
-#     bot.send_message(message.chat.id, 'Напиши название категории')
-#     bot.register_next_step_handler(message, step1)
-#
-#
 # # ADD EXPENSE
 # @bot.message_handler(commands=['add_expense'])
 # def add_expense(message):
@@ -247,33 +164,6 @@ def start(message):
 #
 #     bot.send_message(message.chat.id, "Введи расход")
 #     bot.register_next_step_handler(message, step1)
-#
-#
-# # INFO ABOUT PROJECT
-# @bot.message_handler(commands=['help'])
-# def list_of_commands(message):
-#
-#
-#
-# @bot.callback_query_handler(func=lambda call: True)
-# def callback(call):
-#     global category
-#     if call.message:
-#         if call.data == 'yes':
-#             bot.edit_message_text(
-#                 chat_id=call.message.chat.id,
-#                 message_id=call.message.id,
-#                 text=f"Категория <b>{category['title']}</b> успешно сохранена!",
-#                 parse_mode='html'
-#             )
-#             categories_db.insert_one(category)
-#         elif call.data == 'no':
-#             bot.edit_message_text(
-#                 chat_id=call.message.chat.id,
-#                 message_id=call.message.id,
-#                 text=f"Категория <b>{category['title']}</b> не <u>сохранена!</u>",
-#                 parse_mode='html'
-#             )
 
 
 bot.polling(none_stop=True)
