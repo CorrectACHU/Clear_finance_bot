@@ -8,25 +8,22 @@ services:
     build: ./src
     ports:
       - 8080:80
+    depends_on:
+      - mongo
+
 
   mongo:
     image: mongo
     restart: always
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: "${MONGO_USERNAME}"
-      MONGO_INITDB_ROOT_PASSWORD: "${MONGO_PASS}"
-
-  mongo-express:
-    image: mongo-express
-    restart: always
     ports:
-      - 8081:81
+      - 127.0.0.1:27018:27017
     environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: "${MONGO_USERNAME}"
-      ME_CONFIG_MONGODB_ADMINPASSWORD: "${MONGO_PASS}"
-      ME_CONFIG_MONGODB_URL: "mongodb://${MONGO_USERNAME}:${MONGO_PASS}@mongo:27017/"
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
 
   flask:
     build: ./flask_server
     ports:
       - "127.0.0.1:5000:5000"
+    depends_on:
+      - mongo

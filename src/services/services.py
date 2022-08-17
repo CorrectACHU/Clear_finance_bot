@@ -1,6 +1,16 @@
 import json
 import datetime
 import telebot
+from telebot import types
+
+
+def main_menu():
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    item1 = types.KeyboardButton('Информация')
+    item2 = types.KeyboardButton('Мои категории')
+    item3 = types.KeyboardButton('Мои траты')
+    markup.add(item2, item3, item1)
+    return markup
 
 
 def get_user(message):
@@ -27,6 +37,21 @@ def get_expense(message):
     return expense
 
 
-def cancel_button():
-    item = telebot.types.InlineKeyboardButton('отмена 🚫', callback_data='cancel')
+def back_button():
+    item = telebot.types.KeyboardButton('Назад 🔙')
     return item
+
+
+def back_markup():
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    item = back_button()
+    markup.add(item)
+    return markup
+
+
+def go_back(message, next_message, bot, markup, next_func):
+    bot.send_message(message.chat.id, next_message, reply_markup=markup)
+    bot.delete_message(message.chat.id, message.message_id)
+    bot.register_next_step_handler(message, next_func)
+
+
