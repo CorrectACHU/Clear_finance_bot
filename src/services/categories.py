@@ -17,10 +17,13 @@ def add_category_button():
 
 
 # Get category markup
-def categories_markup(message, db):
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+def categories_markup(message, db, add_button):
     categories = get_categories(message, db)
-    items = [types.KeyboardButton(f'{i["title"]}') for i in categories] + [add_category_button()] + [back_button()]
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    if add_button:
+        items = [types.KeyboardButton(f'{i["title"]}') for i in categories] + [add_category_button()] + [back_button()]
+    else:
+        items = [types.KeyboardButton(f'{i["title"]}') for i in categories] + [back_button()]
     markup.add(*items)
     return markup
 
