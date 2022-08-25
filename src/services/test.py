@@ -1,7 +1,7 @@
-def get_categories():
-    categories = [{'_id': 1245, 'title': 'Grill'}, {'_id': 145, 'title': 'Pooop'}]
-    categories = {categories[i]['_id']: categories[i]['title'] for i in range(len(categories))}
-    return categories
+def get_expense_from_string(message):
+    mess = int(message['text'].split()[0][:-1])
+    # expense = expenses[mess - 1]
+    return mess
 
 
-print(get_categories())
+print(get_expense_from_string({'ss': 'asdfad', 'text': '1. 24142j4n21i3n4'}))
