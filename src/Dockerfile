@@ -1,7 +1,7 @@
 FROM python:3
-ENV PYTHONUNBUFFERED 1
-WORKDIR /app
+WORKDIR /app/src
 COPY requirements.txt .
 RUN pip install -r requirements.txt
-COPY . .
+COPY .. .
+EXPOSE 80
 CMD [ "python", "./main.py" ]
